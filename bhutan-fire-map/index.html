@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en" data-bs-theme="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Bhutan Fire Hotspot Density Map</title>
+
+  <!-- Bootstrap 5 CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <!-- Bootstrap Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet" />
+  <!-- Leaflet CSS -->
+  <link href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" rel="stylesheet" />
+  <!-- Leaflet Fullscreen CSS -->
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.min.css" rel="stylesheet" />
+  <!-- Google Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@600;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ── Loading Overlay ───────────────────────────────────── -->
+  <div id="loading-overlay" class="position-fixed top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center flex-column gap-3">
+    <div class="spinner-border text-warning" role="status" style="width:3.5rem;height:3.5rem;border-width:3px;">
+      <span class="visually-hidden">Loading…</span>
+    </div>
+    <span class="text-secondary fw-semibold text-uppercase" style="font-family:'Rajdhani',sans-serif;letter-spacing:.12em;font-size:.85rem;">
+      Loading fire data…
+    </span>
+  </div>
+
+  <!-- ── Bootstrap Template Layout ─────────────────────────── -->
+  <div class="d-flex" style="height: 100vh; width: 100%;">
+    
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar" style="flex-shrink: 0;">
+      <!-- Header -->
+      <div class="sidebar-header">
+        <i class="bi bi-fire text-warning me-2"></i>
+        <span class="fw-bold text-uppercase">Fire Map</span>
+      </div>
+
+      <!-- Layer Controls Section -->
+      <div class="sidebar-section">
+        <h6 class="sidebar-title">
+          <i class="bi bi-layers-fill me-2 text-success"></i>Layers
+        </h6>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-district" checked>
+          <label class="form-check-label" for="layer-district">
+            <i class="bi bi-grid-3x3-gap-fill text-warning me-1"></i>District Density
+          </label>
+        </div>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-hex" checked>
+          <label class="form-check-label" for="layer-hex">
+            <i class="bi bi-hexagon-fill me-1" style="color:#c51b8a;"></i>Hex Grid Density
+          </label>
+        </div>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-heatmap" checked>
+          <label class="form-check-label" for="layer-heatmap">
+            <i class="bi bi-thermometer-high text-danger me-1"></i>Fire Heatmap
+          </label>
+        </div>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-points" checked>
+          <label class="form-check-label" for="layer-points">
+            <i class="bi bi-circle-fill text-danger me-1" style="font-size:.6rem;"></i>Hotspot Points
+          </label>
+        </div>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-borders" checked>
+          <label class="form-check-label" for="layer-borders">
+            <i class="bi bi-border-outer text-info me-1"></i>Dzongkhag Borders
+          </label>
+        </div>
+        <div class="form-check layer-control">
+          <input class="form-check-input" type="checkbox" id="layer-labels" checked>
+          <label class="form-check-label" for="layer-labels">
+            <i class="bi bi-tag-fill text-light me-1"></i>District Labels
+          </label>
+        </div>
+      </div>
+
+      <!-- Basemap Section -->
+      <div class="sidebar-section">
+        <h6 class="sidebar-title">
+          <i class="bi bi-map me-2 text-secondary"></i>Basemap
+        </h6>
+        <div class="form-check basemap-control">
+          <input class="form-check-input" type="radio" name="basemap" id="basemap-satellite" value="satellite" checked>
+          <label class="form-check-label" for="basemap-satellite">
+            <i class="bi bi-globe-asia-australia me-1"></i>Satellite
+          </label>
+        </div>
+        <div class="form-check basemap-control">
+          <input class="form-check-input" type="radio" name="basemap" id="basemap-dark" value="dark">
+          <label class="form-check-label" for="basemap-dark">
+            <i class="bi bi-moon-stars me-1"></i>Dark Canvas
+          </label>
+        </div>
+        <div class="form-check basemap-control">
+          <input class="form-check-input" type="radio" name="basemap" id="basemap-street" value="street">
+          <label class="form-check-label" for="basemap-street">
+            <i class="bi bi-map me-1"></i>Street Map
+          </label>
+        </div>
+      </div>
+
+      <!-- Stats Section -->
+      <div class="sidebar-section">
+        <h6 class="sidebar-title">
+          <i class="bi bi-bar-chart-fill me-2 text-info"></i>Summary
+        </h6>
+        <div class="stat-item">
+          <span class="stat-label">Hotspots</span>
+          <span class="stat-value" id="stat-hotspots">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Districts</span>
+          <span class="stat-value" id="stat-districts">0</span>
+        </div>
+        <div class="stat-item">
+          <span class="stat-label">Active Hexes</span>
+          <span class="stat-value" id="stat-hex">0</span>
+        </div>
+      </div>
+
+      <!-- Project Metadata Section -->
+      <div class="sidebar-section" style="border-bottom: none; margin-bottom: 1rem;">
+        <h6 class="sidebar-title">
+          <i class="bi bi-info-circle-fill me-2 text-secondary"></i>Project Info
+        </h6>
+        <div class="metadata-item">
+          <span class="metadata-label">Dataset:</span>
+          <span class="metadata-value">NASA FIRMS MODIS</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Region:</span>
+          <span class="metadata-value">Bhutan</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Data Type:</span>
+          <span class="metadata-value">Fire Hotspots</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Projection:</span>
+          <span class="metadata-value">WGS84</span>
+        </div>
+        <div class="metadata-item">
+          <span class="metadata-label">Year:</span>
+          <span class="metadata-value">2024-2025</span>
+        </div>
+      </div>
+
+      <!-- Toggle Button for Mobile -->
+      <button class="sidebar-toggle d-md-none" id="sidebar-toggle">
+        <i class="bi bi-chevron-left"></i>
+      </button>
+    </div>
+
+    <!-- Main Content Area -->
+    <div class="flex-grow-1 d-flex flex-column" style="flex: 1; min-width: 0; overflow: hidden;">
+      
+      <!-- Top Navbar -->
+      <nav class="navbar navbar-dark navbar-top" style="flex-shrink: 0;">
+        <div class="container-fluid">
+          <span class="navbar-brand d-none d-md-inline">
+            <i class="bi bi-fire text-warning me-2 fs-5"></i>
+            <span class="fw-bold text-uppercase">Bhutan Fire Hotspot Density Map</span>
+          </span>
+        </div>
+      </nav>
+
+      <!-- Map Container -->
+      <div id="map" style="flex: 1; width: 100%; height: 100%; overflow: hidden;"></div>
+    </div>
+  </div>
+
+  <!-- ── Legend Card ───────────────────────────────────────── -->
+  <div class="card border-secondary position-fixed"
+       id="legend-card"
+       style="bottom:24px; right:16px; z-index:1000; width:170px;">
+
+    <div class="card-header d-flex align-items-center gap-2 py-1 px-2">
+      <i class="bi bi-map-fill text-info" style="font-size: 0.9rem;"></i>
+      <span class="fw-bold text-uppercase text-light"
+            style="font-family:'Rajdhani',sans-serif;letter-spacing:.1em;font-size:.7rem;">
+        Legend
+      </span>
+    </div>
+
+    <div class="card-body px-2 pt-1 pb-2 d-flex flex-column gap-2">
+
+      <!-- District Density -->
+      <div>
+        <p class="mb-1 fw-semibold text-light" style="font-size:.7rem;">
+          <i class="bi bi-grid-3x3-gap-fill me-1 text-warning" style="font-size: 0.8rem;"></i>District Density
+        </p>
+        <div class="legend-bar rounded"
+             style="background:linear-gradient(to right,#ffffb2,#fecc5c,#fd8d3c,#f03b20,#bd0026); height: 8px;"></div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-secondary" style="font-size:.6rem;">Low</span>
+          <span class="text-secondary" style="font-size:.6rem;">High</span>
+        </div>
+      </div>
+
+      <!-- Hex Grid -->
+      <div>
+        <p class="mb-1 fw-semibold text-light" style="font-size:.7rem;">
+          <i class="bi bi-hexagon-fill me-1" style="color:#c51b8a; font-size: 0.8rem;"></i>Hex Grid Density
+        </p>
+        <div class="legend-bar rounded"
+             style="background:linear-gradient(to right,#fde0dd,#fa9fb5,#f768a1,#c51b8a,#7a0177); height: 8px;"></div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-secondary" style="font-size:.6rem;">Low</span>
+          <span class="text-secondary" style="font-size:.6rem;">High</span>
+        </div>
+      </div>
+
+      <!-- Heatmap -->
+      <div>
+        <p class="mb-1 fw-semibold text-light" style="font-size:.7rem;">
+          <i class="bi bi-thermometer-high me-1 text-danger" style="font-size: 0.8rem;"></i>Fire Heatmap
+        </p>
+        <div class="legend-bar rounded"
+             style="background:linear-gradient(to right,#0000ff,#00ffff,#00ff00,#ffff00,#ff0000); height: 8px;"></div>
+        <div class="d-flex justify-content-between mt-1">
+          <span class="text-secondary" style="font-size:.6rem;">Low</span>
+          <span class="text-secondary" style="font-size:.6rem;">High</span>
+        </div>
+      </div>
+
+      <hr class="my-1 opacity-25" style="margin: 0.5rem 0;" />
+
+      <!-- Symbols -->
+      <div class="d-flex flex-column gap-1">
+        <div class="d-flex align-items-center gap-1">
+          <span class="symbol-dot" style="background:#ff3333; width: 8px; height: 8px;"></span>
+          <span class="text-secondary" style="font-size:.65rem;">Hotspot</span>
+        </div>
+        <div class="d-flex align-items-center gap-1">
+          <span class="symbol-line" style="background:#00d4ff; width: 18px; height: 2px;"></span>
+          <span class="text-secondary" style="font-size:.65rem;">Border</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Card Footer: data note -->
+    <div class="card-footer py-1 px-2 text-center">
+      <small class="text-secondary opacity-75" style="font-size:.55rem;">
+        <i class="bi bi-satellite me-1" style="font-size: 0.75rem;"></i>NASA FIRMS
+      </small>
+    </div>
+
+  </div>
+
+  <!-- ── Error Toast ────────────────────────────────────────── -->
+  <div class="toast-container position-fixed bottom-0 start-0 p-3" style="z-index:9999;">
+    <div id="error-toast" class="toast align-items-center text-bg-danger border-0" role="alert">
+      <div class="d-flex">
+        <div class="toast-body d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill"></i>
+          <span id="error-msg">Failed to load data file.</span>
+        </div>
+        <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Scripts ────────────────────────────────────────────── -->
+  <!-- Bootstrap 5 Bundle (includes Popper) -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <!-- Leaflet -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <!-- Leaflet Heat -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.heat/0.2.0/leaflet-heat.js"></script>
+  <!-- Leaflet Fullscreen -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.fullscreen/3.0.2/Control.FullScreen.min.js"></script>
+  <!-- App -->
+  <script src="app.js"></script>
+</body>
+</html>
